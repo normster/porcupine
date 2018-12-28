@@ -3,12 +3,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class PLinear(nn.Linear):
-    def __init__(self, in_features, out_features, bias=True):
+    def __init__(self, in_features, out_features, bias=True, diverse_init=False):
         super(PLinear, self).__init__(in_features, out_features, bias)
         self.scale = nn.Parameter(torch.ones(out_features))
         self.weight.requires_grad = False
         if bias:
             self.bias.requires_grad = False
+        while not self._diverse_weights():
+            self.reset_parameters()
+
+    def _diverse_weights(self):
+        for i in range(self.weight.size(0)):
+            if torch.abs(torch.sum(torch.sign(self.weight[i]))) == self.weight.size(1):
+                return False
+        return True
 
     def forward(self, input):
         return F.linear(input, self.weight, self.bias) * self.scale
